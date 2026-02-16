@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Sticker Generator Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Poppins:wght@500;700&family=Pacifico&display=swap" rel="stylesheet">
+<style>
+  body {
+    margin: 0;
+    font-family: Poppins, sans-serif;
+    background: #f2f3f7;
+    display: flex;
+    min-height: 100vh;
+  }
+  .panel {
+    width: 340px;
+    padding: 20px;
+    background: #ffffff;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+  }
+  .panel h2 { margin-top: 0; }
+  .panel label { display: block; margin-top: 12px; font-size: 14px; }
+  .panel input, .panel select, .panel button {
+    width: 100%;
+    padding: 8px;
+    margin-top: 6px;
+    font-size: 14px;
+  }
+  .panel button { margin-top: 15px; cursor: pointer; }
+  .canvas-wrap {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  canvas {
+    background: #ddd;
+    border: 1px dashed #aaa;
+    width: 500px;
+    height: 500px;
+  }
+</style>
+</head>
+<body>
+
+<div class="panel">
+  <h2>🎨 Sticker Generator Pro</h2>
+
+  <label>Sticker Text</label>
+  <input type="text" id="textInput" value="Good Vibes Only">
+
+  <label>Design Style</label>
+  <select id="styleSelect">
+    <option value="cute">Cute</option>
+    <option value="aesthetic">Aesthetic</option>
+    <option value="bold">Bold</option>
+    <option value="minimal">Minimal</option>
+  </select>
+
+  <label>Text Color</label>
+  <input type="color" id="textColor" value="#000000">
+
+  <label>Shape</label>
+  <select id="shapeSelect">
+    <option value="rounded">Rounded</option>
+    <option value="circle">Circle</option>
+    <option value="badge">Badge</option>
+  </select>
+
+  <button onclick="drawSticker()">Generate Sticker</button>
+  <button onclick="downloadSticker()">Download PNG (Transparent)</button>
+</div>
+
+<div class="canvas-wrap">
+  <!-- Real canvas is 3000x3000 for print, but shown smaller -->
+  <canvas id="stickerCanvas" width="3000" height="3000"></canvas>
+</div>
+
+<script>
+const canvas = document.getElementById("stickerCanvas");
+const ctx = canvas.getContext("2d");
+
+function drawSticker() {
+  const text = document.getElementById("textInput").value;
+  const style = document.getElementById("styleSelect").value;
+  const textColor = document.getElementById("textColor").value;
+  const shape = document.getElementById("shapeSelect").value;
+
+  // Clear with transparent background
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const centerX = 1500;
+  const centerY = 1500;
+  const width = 2000;
+  const height = 1400;
+  const radius = 200;
+
+  // Draw sticker base (filled shape)
+  ctx.beginPath();
+  if (shape === "circle") {
+    ctx.arc(centerX, centerY, 900, 0, Math.PI * 2);
+  } else if (shape === "badge") {
+    ctx.moveTo(700, 900);
+    ctx.lineTo(2300, 900);
+    ctx.lineTo(2500, 1500);
+    ctx.lineTo(2300, 2100);
+    ctx.lineTo(700, 2100);
+    ctx.lineTo(500, 1500);
+    ctx.closePath();
+  } else {
+    roundRect(ctx, 500, 800, 2000, 1400, radius);
+  }
+
+  // Fill (light color for contrast)
+  ctx.fillStyle = "#ffffff";
+  ctx.fill();
+
+  // White outline (sticker border)
+  ctx.lineWidth = 80;
+  ctx.strokeStyle = "#ffffff";
+  ctx.stroke();
+
+  // Choose font by style
+  let font = "220px Poppins";
+  if (style === "cute") font = "220px 'Pacifico'";
+  if (style === "aesthetic") font = "200px 'Playfair Display'";
+  if (style === "bold") font = "260px Poppins";
+  if (style === "minimal") font = "200px Poppins";
+
+  ctx.fillStyle = textColor;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = font;
+
+  // Slight shadow for trendy look
+  ctx.shadowColor = "rgba(0,0,0,0.2)";
+  ctx.shadowBlur = 20;
+  ctx.shadowOffsetX = 10;
+  ctx.shadowOffsetY = 10;
+
+  wrapText(ctx, text, centerX, centerY, 1400, 260);
+
+  // Reset shadow
+  ctx.shadowColor = "transparent";
+}
+
+function roundRect(ctx, x, y, width, height, radius) {
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+}
+
+function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(" ");
+  let line = "";
+  let lines = [];
+
+  for (let n = 0; n < words.length; n++) {
+    let testLine = line + words[n] + " ";
+    let metrics = ctx.measureText(testLine);
+    if (metrics.width > maxWidth && n > 0) {
+      lines.push(line);
+      line = words[n] + " ";
+    } else {
+      line = testLine;
+    }
+  }
+  lines.push(line);
+
+  const startY = y - ((lines.length - 1) * lineHeight) / 2;
+  for (let i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i], x, startY + i * lineHeight);
+  }
+}
+
+function downloadSticker() {
+  const link = document.createElement("a");
+  link.download = "sticker.png";
+  link.href = canvas.toDataURL("image/png"); // Transparent PNG
+  link.click();
+}
+
+// First draw
+drawSticker();
+</script>
+
+</body>
+</html>
